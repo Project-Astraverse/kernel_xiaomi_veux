@@ -806,8 +806,6 @@ ifdef CONFIG_CC_IS_CLANG
 KBUILD_CPPFLAGS += -Qunused-arguments
 KBUILD_CFLAGS += -Wno-format-invalid-specifier
 KBUILD_CFLAGS += -Wno-gnu
-# Quiet clang warning: comparison of unsigned expression < 0 is always false
-KBUILD_CFLAGS += -Wno-tautological-compare
 KBUILD_CFLAGS += $(call cc-disable-warning, undefined-optimized)
 
 # Clang may emit a warning when a const variable, such as the dummy variables
