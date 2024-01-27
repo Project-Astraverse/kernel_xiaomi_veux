@@ -835,8 +835,12 @@ static int wls_psy_get_prop(struct power_supply *psy,
 		return prop_id;
 
 	rc = read_property_id(bcdev, pst, prop_id);
-	if (rc < 0)
+	if (rc < 0) {
+		// Halium: return -ENODATA on timeout so it's power_supply_uevent doesn't abort
+		if (rc == -ETIMEDOUT)
+			rc = -ENODATA;
 		return rc;
+	}
 
 	pval->intval = pst->prop[prop_id];
 
