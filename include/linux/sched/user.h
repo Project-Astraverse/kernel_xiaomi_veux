@@ -21,9 +21,11 @@ struct user_struct {
 #ifdef CONFIG_EPOLL
 	atomic_long_t epoll_watches; /* The number of file descriptors currently watched */
 #endif
+#if !defined(CONFIG_QGKI) // Avoid GKI ABI break
 #ifdef CONFIG_POSIX_MQUEUE
 	/* protected by mq_lock	*/
 	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
+#endif
 #endif
 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
 	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
@@ -41,7 +43,11 @@ struct user_struct {
 	/* Miscellaneous per-user rate limit */
 	struct ratelimit_state ratelimit;
 
+#if !defined(CONFIG_QGKI)
 	ANDROID_KABI_RESERVE(1);
+#else
+	ANDROID_KABI_USE(1, unsigned long mq_bytes);
+#endif
 	ANDROID_KABI_RESERVE(2);
 };
 
