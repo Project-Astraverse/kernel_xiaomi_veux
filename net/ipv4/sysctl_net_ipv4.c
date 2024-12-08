@@ -683,7 +683,7 @@ static struct ctl_table ipv4_net_table[] = {
 		.procname	= "ip_local_port_range",
 		.maxlen		= sizeof(init_net.ipv4.ip_local_ports.range),
 		.data		= &init_net.ipv4.ip_local_ports.range,
-		.mode		= 0644,
+		.mode		= 0444,
 		.proc_handler	= ipv4_local_port_range,
 	},
 	{
