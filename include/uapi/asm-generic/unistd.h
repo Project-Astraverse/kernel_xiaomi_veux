@@ -850,8 +850,11 @@ __SYSCALL(__NR_pidfd_open, sys_pidfd_open)
 #define __NR_clone3 435
 __SYSCALL(__NR_clone3, sys_clone3)
 #endif
-#define __NR_close_range 436
-__SYSCALL(__NR_close_range, sys_close_range)
+/* Halium hack:
+ * As close_range() uses the syscall ID 436 in mainline Linux,
+ * process_madvise would conflict with it and cause it to not boot.
+ * Change the syscall ID.
+*/
 #define __NR_process_madvise 440
 __SYSCALL(__NR_process_madvise, sys_process_madvise)
 #define __NR_epoll_pwait2 441
