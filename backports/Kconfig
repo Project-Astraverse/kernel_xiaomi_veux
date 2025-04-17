@@ -1,0 +1,52 @@
+config BACKPORT_INTEGRATE
+	bool
+	def_bool y
+
+config BACKPORT_DIR
+	string
+	default "backports/"
+
+config BACKPORT_VERSION
+	string
+	default "v5.15.153-1-0-g7e70bbef"
+
+config BACKPORT_KERNEL_VERSION
+	string
+	default "v5.15.153-0-g9465fef4ae351"
+
+config BACKPORT_KERNEL_NAME
+	string
+	default "Linux"
+
+menuconfig BACKPORT_LINUX
+	bool "Backport Linux v5.15.153-1-0-g7e70bbef (backports v5.15.153-0-g9465fef4ae351)"
+	default n
+	---help---
+	  Enabling this will let give you the opportunity to use features and
+	  drivers backported from Linux v5.15.153-1-0-g7e70bbef
+	  on the kernel your are using. This is experimental and you should
+	  say no unless you'd like to help test things or want to help debug
+	  this should we run into any issues.
+
+if BACKPORT_LINUX
+
+config BACKPORT_KERNEL_5_5
+    def_bool y
+config BACKPORT_KERNEL_5_10
+    def_bool y
+config BACKPORT_KERNEL_5_11
+    def_bool y
+config BACKPORT_KERNEL_5_13
+    def_bool y
+config BACKPORT_KERNEL_5_15
+    def_bool y
+
+# this has the configuration for the backport code
+source "backports/compat/Kconfig"
+
+source "backports/drivers/bluetooth/Kconfig"
+
+# these are copied from the kernel
+source "backports/net/bluetooth/Kconfig"
+
+endif # BACKPORT_LINUX

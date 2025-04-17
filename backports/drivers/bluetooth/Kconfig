@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0
+
+menu "Bluetooth device drivers"
+	depends on BACKPORT_BT
+
+config BACKPORT_BT_HCIVHCI
+	tristate "HCI VHCI (Virtual HCI device) driver"
+	help
+	  Bluetooth Virtual HCI device driver.
+	  This driver is required if you want to use HCI Emulation software.
+
+	  Say Y here to compile support for virtual HCI devices into the
+	  kernel or say M to compile it as module (hci_vhci).
+
+endmenu
