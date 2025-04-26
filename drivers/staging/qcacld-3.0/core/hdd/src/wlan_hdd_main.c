@@ -240,10 +240,12 @@
 int wlan_start_ret_val;
 static DECLARE_COMPLETION(wlan_start_comp);
 static qdf_atomic_t wlan_hdd_state_fops_ref;
+#ifdef MODULE
 static unsigned int dev_num = 1;
 static struct cdev wlan_hdd_state_cdev;
 static struct class *class;
 static dev_t device;
+#endif
 static bool hdd_loaded = false;
 #ifndef MODULE
 static struct gwlan_loader *wlan_loader;
@@ -16993,6 +16995,8 @@ const struct file_operations wlan_hdd_state_fops = {
 	.release = wlan_hdd_state_ctrl_param_release,
 };
 
+#ifdef MODULE
+#ifndef FEATURE_WLAN_RESIDENT_DRIVER
 static int  wlan_hdd_state_ctrl_param_create(void)
 {
 	unsigned int wlan_hdd_state_major = 0;
@@ -17057,6 +17061,8 @@ static void wlan_hdd_state_ctrl_param_destroy(void)
 
 	pr_info("Device node unregistered");
 }
+#endif
+#endif
 
 /**
  * hdd_component_init() - Initialize all components
@@ -17925,7 +17931,11 @@ void hdd_driver_unload(void)
 
 	hdd_driver_mode_change_unregister();
 	pld_deinit();
+#ifdef MODULE
+#ifndef FEATURE_WLAN_RESIDENT_DRIVER
 	wlan_hdd_state_ctrl_param_destroy();
+#endif
+#endif
 	hdd_set_conparam(0);
 	qdf_wake_lock_destroy(&wlan_wake_lock);
 	hdd_component_deinit();
