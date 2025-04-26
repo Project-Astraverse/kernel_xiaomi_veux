@@ -14347,6 +14347,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	bool b_cts2self, is_imps_enabled;
 	bool rf_test_mode;
 	bool std_6ghz_conn_policy;
+	struct hdd_adapter *adapter = NULL;
 
 	hdd_enter();
 
@@ -14365,7 +14366,11 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	sme_setdef_dot11mode(mac_handle);
 
 	ucfg_mlme_is_imps_enabled(hdd_ctx->psoc, &is_imps_enabled);
-	hdd_set_idle_ps_config(hdd_ctx, is_imps_enabled);
+	//hdd_set_idle_ps_config(hdd_ctx, is_imps_enabled);
+	hdd_set_idle_ps_config(hdd_ctx, true);
+	qdf_list_for_each(&hdd_ctx->hdd_adapters, adapter, node) {
+		wlan_hdd_set_powersave(adapter, true, 5000);
+	}
 
 	/* Send Enable/Disable data stall detection cmd to FW */
 	sme_cli_set_command(0, WMI_PDEV_PARAM_DATA_STALL_DETECT_ENABLE,
