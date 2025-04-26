@@ -474,7 +474,7 @@ void ipa_component_config_update(struct wlan_objmgr_psoc *psoc);
  * ipa_component_config_free() - Free ipa config
  *
  * Return: None
- */
+ */bool ipa_cb_is_ready(void);
 void ipa_component_config_free(void);
 
 /**
@@ -506,12 +506,13 @@ void ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 				   uint8_t vdev_id);
 
 /**
- * ipa_is_ready() - Is IPA register callback is invoked
+ * ipa_cb_is_ready() - Is IPA register callback is invoked
  *
  * Return: true if IPA register callback is invoked or false
  * otherwise
  */
-bool ipa_is_ready(void);
+bool ipa_cb_is_ready(void);
+#define ipa_cb_is_ready qca_ipa_is_ready
 
 /**
  * ipa_init_deinit_lock() - lock ipa init deinit lock
