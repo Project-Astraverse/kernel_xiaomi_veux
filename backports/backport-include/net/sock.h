@@ -40,4 +40,19 @@ static inline void backport_sk_error_report(struct sock *sk)
 #define sk_error_report(sk) LINUX_BACKPORT(sk_error_report(sk))
 #endif /* <= 5.14 */
 
+#if LINUX_VERSION_IS_LESS(6,1,0)
+#define skb_pull_data LINUX_BACKPORT(skb_pull_data)
+static inline void *skb_pull_data(struct sk_buff *skb, size_t len)
+{
+	void *data = skb->data;
+
+	if (skb->len < len)
+		return NULL;
+
+	skb_pull(skb, len);
+
+	return data;
+}
+#endif
+
 #endif /* __BACKPORT_NET_SOCK_H */

@@ -6,7 +6,7 @@
 menuconfig BACKPORT_BT
 	tristate "Bluetooth subsystem support"
 	depends on !BT
-	depends on NET && !S390
+	depends on !S390
 	depends on RFKILL || !RFKILL
 	select CRC16
 	select CRYPTO
@@ -100,6 +100,13 @@ config BACKPORT_BT_MSFTEXT
 	  This options enables support for the Microsoft defined HCI
 	  vendor extensions.
 
+config BACKPORT_BT_AOSPEXT
+	bool "Enable Android Open Source Project extensions"
+	depends on BACKPORT_BT
+	help
+	  This options enables support for the Android Open Source
+	  Project defined HCI vendor extensions.
+
 config BACKPORT_BT_DEBUGFS
 	bool "Export Bluetooth internals in debugfs"
 	depends on BACKPORT_BT && DEBUG_FS
@@ -123,14 +130,14 @@ config BACKPORT_BT_SELFTEST
 
 config BACKPORT_BT_SELFTEST_ECDH
 	bool "ECDH test cases"
-	depends on BACKPORT_BT_LE && BT_SELFTEST
+	depends on BACKPORT_BT_LE && BACKPORT_BT_SELFTEST
 	help
 	  Run test cases for ECDH cryptographic functionality used by the
 	  Bluetooth Low Energy Secure Connections feature.
 
 config BACKPORT_BT_SELFTEST_SMP
 	bool "SMP test cases"
-	depends on BACKPORT_BT_LE && BT_SELFTEST
+	depends on BACKPORT_BT_LE && BACKPORT_BT_SELFTEST
 	help
 	  Run test cases for SMP cryptographic functionality, including both
 	  legacy SMP as well as the Secure Connections features.

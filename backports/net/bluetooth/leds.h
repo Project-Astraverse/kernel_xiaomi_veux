@@ -3,7 +3,7 @@
  * Copyright 2015, Heiner Kallweit <hkallweit1@gmail.com>
  */
 
-#if IS_ENABLED(CONFIG_BT_LEDS)
+#if IS_ENABLED(CONFIG_BACKPORT_BT_LEDS)
 
 void hci_leds_update_powered(struct hci_dev *hdev, bool enabled);
 void hci_leds_init(struct hci_dev *hdev);

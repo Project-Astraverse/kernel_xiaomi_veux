@@ -85,7 +85,7 @@ static int bnep_send_rsp(struct bnep_session *s, u8 ctrl, u16 resp)
 	return bnep_send(s, &rsp, sizeof(rsp));
 }
 
-#ifdef CONFIG_BT_BNEP_PROTO_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_PROTO_FILTER
 static inline void bnep_set_default_proto_filter(struct bnep_session *s)
 {
 	/* (IPv4, ARP)  */
@@ -116,7 +116,7 @@ static int bnep_ctrl_set_netfilter(struct bnep_session *s, __be16 *data, int len
 
 	BT_DBG("filter len %d", n);
 
-#ifdef CONFIG_BT_BNEP_PROTO_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_PROTO_FILTER
 	n /= 4;
 	if (n <= BNEP_MAX_PROTO_FILTERS) {
 		struct bnep_proto_filter *f = s->proto_filter;
@@ -126,8 +126,8 @@ static int bnep_ctrl_set_netfilter(struct bnep_session *s, __be16 *data, int len
 			f[i].start = get_unaligned_be16(data++);
 			f[i].end   = get_unaligned_be16(data++);
 
-			BT_DBG("proto filter start %d end %d",
-				f[i].start, f[i].end);
+			BT_DBG("proto filter start %u end %u",
+			       f[i].start, f[i].end);
 		}
 
 		if (i < BNEP_MAX_PROTO_FILTERS)
@@ -162,7 +162,7 @@ static int bnep_ctrl_set_mcfilter(struct bnep_session *s, u8 *data, int len)
 
 	BT_DBG("filter len %d", n);
 
-#ifdef CONFIG_BT_BNEP_MC_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_MC_FILTER
 	n /= (ETH_ALEN * 2);
 
 	if (n > 0) {
@@ -266,7 +266,7 @@ static int bnep_rx_extension(struct bnep_session *s, struct sk_buff *skb)
 			break;
 		}
 
-		BT_DBG("type 0x%x len %d", h->type, h->len);
+		BT_DBG("type 0x%x len %u", h->type, h->len);
 
 		switch (h->type & BNEP_TYPE_MASK) {
 		case BNEP_EXT_CONTROL:
@@ -425,7 +425,7 @@ static int bnep_tx_frame(struct bnep_session *s, struct sk_buff *skb)
 	int len = 0, il = 0;
 	u8 type = 0;
 
-	BT_DBG("skb %p dev %p type %d", skb, skb->dev, skb->pkt_type);
+	BT_DBG("skb %p dev %p type %u", skb, skb->dev, skb->pkt_type);
 
 	if (!skb->dev) {
 		/* Control frame sent by us */
@@ -605,7 +605,7 @@ int bnep_add_connection(struct bnep_connadd_req *req, struct socket *sock)
 
 	s->msg.msg_flags = MSG_NOSIGNAL;
 
-#ifdef CONFIG_BT_BNEP_MC_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_MC_FILTER
 	/* Set default mc filter to not filter out any mc addresses
 	 * as defined in the BNEP specification (revision 0.95a)
 	 * http://grouper.ieee.org/groups/802/15/Bluetooth/BNEP.pdf
@@ -613,7 +613,7 @@ int bnep_add_connection(struct bnep_connadd_req *req, struct socket *sock)
 	s->mc_filter = ~0LL;
 #endif
 
-#ifdef CONFIG_BT_BNEP_PROTO_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_PROTO_FILTER
 	/* Set default protocol filter */
 	bnep_set_default_proto_filter(s);
 #endif
@@ -733,11 +733,11 @@ static int __init bnep_init(void)
 {
 	char flt[50] = "";
 
-#ifdef CONFIG_BT_BNEP_PROTO_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_PROTO_FILTER
 	strcat(flt, "protocol ");
 #endif
 
-#ifdef CONFIG_BT_BNEP_MC_FILTER
+#ifdef CONFIG_BACKPORT_BT_BNEP_MC_FILTER
 	strcat(flt, "multicast");
 #endif
 

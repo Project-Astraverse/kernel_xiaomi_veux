@@ -894,7 +894,7 @@ static int hci_sock_release(struct socket *sock)
 	return 0;
 }
 
-static int hci_sock_blacklist_add(struct hci_dev *hdev, void __user *arg)
+static int hci_sock_reject_list_add(struct hci_dev *hdev, void __user *arg)
 {
 	bdaddr_t bdaddr;
 	int err;
@@ -904,14 +904,14 @@ static int hci_sock_blacklist_add(struct hci_dev *hdev, void __user *arg)
 
 	hci_dev_lock(hdev);
 
-	err = hci_bdaddr_list_add(&hdev->blacklist, &bdaddr, BDADDR_BREDR);
+	err = hci_bdaddr_list_add(&hdev->reject_list, &bdaddr, BDADDR_BREDR);
 
 	hci_dev_unlock(hdev);
 
 	return err;
 }
 
-static int hci_sock_blacklist_del(struct hci_dev *hdev, void __user *arg)
+static int hci_sock_reject_list_del(struct hci_dev *hdev, void __user *arg)
 {
 	bdaddr_t bdaddr;
 	int err;
@@ -921,7 +921,7 @@ static int hci_sock_blacklist_del(struct hci_dev *hdev, void __user *arg)
 
 	hci_dev_lock(hdev);
 
-	err = hci_bdaddr_list_del(&hdev->blacklist, &bdaddr, BDADDR_BREDR);
+	err = hci_bdaddr_list_del(&hdev->reject_list, &bdaddr, BDADDR_BREDR);
 
 	hci_dev_unlock(hdev);
 
@@ -961,12 +961,12 @@ static int hci_sock_bound_ioctl(struct sock *sk, unsigned int cmd,
 	case HCIBLOCKADDR:
 		if (!capable(CAP_NET_ADMIN))
 			return -EPERM;
-		return hci_sock_blacklist_add(hdev, (void __user *)arg);
+		return hci_sock_reject_list_add(hdev, (void __user *)arg);
 
 	case HCIUNBLOCKADDR:
 		if (!capable(CAP_NET_ADMIN))
 			return -EPERM;
-		return hci_sock_blacklist_del(hdev, (void __user *)arg);
+		return hci_sock_reject_list_del(hdev, (void __user *)arg);
 	}
 
 	return -ENOIOCTLCMD;
@@ -1179,7 +1179,7 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 		if (!hci_sock_gen_cookie(sk)) {
 			/* In the case when a cookie has already been assigned,
 			 * then there has been already an ioctl issued against
-			 * an unbound socket and with that triggerd an open
+			 * an unbound socket and with that triggered an open
 			 * notification. Send a close notification first to
 			 * allow the state transition to bounded.
 			 */
@@ -1375,9 +1375,9 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 		if (hci_pi(sk)->channel == HCI_CHANNEL_CONTROL) {
 			if (!hci_sock_gen_cookie(sk)) {
 				/* In the case when a cookie has already been
-				 * assigned, this socket will transtion from
+				 * assigned, this socket will transition from
 				 * a raw socket into a control socket. To
-				 * allow for a clean transtion, send the
+				 * allow for a clean transition, send the
 				 * close notification first.
 				 */
 				skb = create_monitor_ctrl_close(sk);
@@ -1890,10 +1890,11 @@ drop:
 }
 
 static int hci_sock_setsockopt(struct socket *sock, int level, int optname,
-			       char __user *optval, unsigned int len)
+			       char __user *poptval, unsigned int len)
 {
 	struct hci_ufilter uf = { .opcode = 0 };
 	struct sock *sk = sock->sk;
+	sockptr_t optval = USER_SOCKPTR(poptval);
 	int err = 0, opt = 0;
 
 	BT_DBG("sk %p, opt %d", sk, optname);
@@ -1910,7 +1911,7 @@ static int hci_sock_setsockopt(struct socket *sock, int level, int optname,
 
 	switch (optname) {
 	case HCI_DATA_DIR:
-		if (get_user(opt, (int __user *)optval)) {
+		if (copy_from_sockptr(&opt, optval, sizeof(opt))) {
 			err = -EFAULT;
 			break;
 		}
@@ -1922,7 +1923,7 @@ static int hci_sock_setsockopt(struct socket *sock, int level, int optname,
 		break;
 
 	case HCI_TIME_STAMP:
-		if (get_user(opt, (int __user *)optval)) {
+		if (copy_from_sockptr(&opt, optval, sizeof(opt))) {
 			err = -EFAULT;
 			break;
 		}
@@ -1944,7 +1945,7 @@ static int hci_sock_setsockopt(struct socket *sock, int level, int optname,
 		}
 
 		len = min_t(unsigned int, len, sizeof(uf));
-		if (copy_from_user(&uf, optval, len)) {
+		if (copy_from_sockptr(&uf, optval, len)) {
 			err = -EFAULT;
 			break;
 		}

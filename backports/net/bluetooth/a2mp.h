@@ -124,7 +124,7 @@ struct a2mp_physlink_rsp {
 
 struct amp_mgr *amp_mgr_get(struct amp_mgr *mgr);
 
-#if IS_ENABLED(CONFIG_BT_HS)
+#if IS_ENABLED(CONFIG_BACKPORT_BT_HS)
 int amp_mgr_put(struct amp_mgr *mgr);
 struct l2cap_chan *a2mp_channel_create(struct l2cap_conn *conn,
 				       struct sk_buff *skb);

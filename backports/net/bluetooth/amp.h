@@ -38,7 +38,7 @@ void amp_create_phylink(struct hci_dev *hdev, struct amp_mgr *mgr,
 void amp_accept_phylink(struct hci_dev *hdev, struct amp_mgr *mgr,
 			struct hci_conn *hcon);
 
-#if IS_ENABLED(CONFIG_BT_HS)
+#if IS_ENABLED(CONFIG_BACKPORT_BT_HS)
 void amp_create_logical_link(struct l2cap_chan *chan);
 void amp_disconnect_logical_link(struct hci_chan *hchan);
 #else

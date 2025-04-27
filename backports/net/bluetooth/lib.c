@@ -183,7 +183,7 @@ void bt_err(const char *format, ...)
 }
 EXPORT_SYMBOL(bt_err);
 
-#ifdef CONFIG_BT_FEATURE_DEBUG
+#ifdef CONFIG_BACKPORT_BT_FEATURE_DEBUG
 static bool debug_enable;
 
 void bt_dbg_set(bool enable)

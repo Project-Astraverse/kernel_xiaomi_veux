@@ -126,6 +126,7 @@ static int __vhci_create_device(struct vhci_data *data, __u8 opcode)
 
 	set_bit(HCI_QUIRK_VALID_LE_STATES, &hdev->quirks);
 	set_bit(HCI_QUIRK_NO_SUSPEND_NOTIFIER, &hdev->quirks);
+	set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
 
 	if (hci_register_dev(hdev) < 0) {
 		BT_ERR("Can't register HCI device");
