@@ -1305,10 +1305,8 @@ static void hci_req_add_set_adv_filter_enable(struct hci_request *req,
 void hci_req_prepare_suspend(struct hci_dev *hdev, enum suspended_state next)
 {
 	int old_state;
-	struct hci_conn *conn;
 	struct hci_request req;
 	u8 page_scan;
-	int disconnect_counter;
 
 	if (next == hdev->suspend_state) {
 		bt_dev_dbg(hdev, "Same state before and after: %d", next);
@@ -1318,7 +1316,7 @@ void hci_req_prepare_suspend(struct hci_dev *hdev, enum suspended_state next)
 	hdev->suspend_state = next;
 	hci_req_init(&req, hdev);
 
-	if (next == BT_SUSPEND_DISCONNECT) {
+	if (next == BT_SUSPEND_CONFIGURE_WAKE) {
 		/* Mark device as suspended */
 		hdev->suspended = true;
 
@@ -1369,23 +1367,6 @@ void hci_req_prepare_suspend(struct hci_dev *hdev, enum suspended_state next)
 		/* Prevent disconnects from causing scanning to be re-enabled */
 		hdev->scanning_paused = true;
 
-		/* Run commands before disconnecting */
-		hci_req_run(&req, suspend_req_complete);
-
-		disconnect_counter = 0;
-		/* Soft disconnect everything (power off) */
-		list_for_each_entry(conn, &hdev->conn_hash.list, list) {
-			hci_disconnect(conn, HCI_ERROR_REMOTE_POWER_OFF);
-			disconnect_counter++;
-		}
-
-		if (disconnect_counter > 0) {
-			bt_dev_dbg(hdev,
-				   "Had %d disconnects. Will wait on them",
-				   disconnect_counter);
-			set_bit(SUSPEND_DISCONNECTING, hdev->suspend_tasks);
-		}
-	} else if (next == BT_SUSPEND_CONFIGURE_WAKE) {
 		/* Unpause to take care of updating scanning params */
 		hdev->scanning_paused = false;
 		/* Enable event filter for paired devices */

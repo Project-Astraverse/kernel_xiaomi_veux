@@ -3720,18 +3720,6 @@ static int hci_suspend_notifier(struct notifier_block *nb, unsigned long action,
 		goto done;
 
 	if (action == PM_SUSPEND_PREPARE) {
-		/* Suspend consists of two actions:
-		 *  - First, disconnect everything and make the controller not
-		 *    connectable (disabling scanning)
-		 *  - Second, program event filter/accept list and enable scan
-		 */
-		ret = hci_change_suspend_state(hdev, BT_SUSPEND_DISCONNECT);
-		if (!ret)
-			state = BT_SUSPEND_DISCONNECT;
-
-		/* Only configure accept list if disconnect succeeded and wake
-		 * isn't being prevented.
-		 */
 		if (!ret && !(hdev->prevent_wake && hdev->prevent_wake(hdev))) {
 			ret = hci_change_suspend_state(hdev,
 						BT_SUSPEND_CONFIGURE_WAKE);
