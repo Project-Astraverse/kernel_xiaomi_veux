@@ -290,6 +290,9 @@ static int cfg80211_rfkill_set_block(void *data, bool blocked)
 {
 	struct cfg80211_registered_device *rdev = data;
 
+	if (rdev->ops->rfkill_blocked)
+		rdev->ops->rfkill_blocked(&rdev->wiphy, blocked);
+
 	if (!blocked)
 		return 0;
 

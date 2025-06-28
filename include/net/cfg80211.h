@@ -3877,6 +3877,7 @@ struct cfg80211_ops {
 				const u8 *addr);
 
 	void	(*rfkill_poll)(struct wiphy *wiphy);
+	void	(*rfkill_blocked)(struct wiphy *wiphy, bool blocked);
 
 #ifdef CONFIG_NL80211_TESTMODE
 	int	(*testmode_cmd)(struct wiphy *wiphy, struct wireless_dev *wdev,

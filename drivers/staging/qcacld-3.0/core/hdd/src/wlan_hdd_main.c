@@ -16849,7 +16849,8 @@ static void __hdd_inform_wifi_off(void)
 	ucfg_blm_wifi_off(hdd_ctx->pdev);
 }
 
-static void hdd_inform_wifi_off(void)
+void hdd_inform_wifi_off(void);
+void hdd_inform_wifi_off(void)
 {
 	int ret;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
@@ -16875,9 +16876,10 @@ void hdd_init_start_completion(void)
 	INIT_COMPLETION(wlan_start_comp);
 }
 
+void hdd_inform_wifi_on(void);
 #if defined CFG80211_USER_HINT_CELL_BASE_SELF_MANAGED || \
                     (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0))
-static void hdd_inform_wifi_on(void)
+void hdd_inform_wifi_on(void)
 {
 	int ret;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
@@ -16900,7 +16902,7 @@ static void hdd_inform_wifi_on(void)
 	osif_psoc_sync_op_stop(psoc_sync);
 }
 #else
-static void hdd_inform_wifi_on(void)
+void hdd_inform_wifi_on(void)
 {
 }
 #endif

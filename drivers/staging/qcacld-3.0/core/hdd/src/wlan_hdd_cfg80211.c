@@ -26048,6 +26048,23 @@ static int wlan_hdd_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
 	return errno;
 }
 
+static bool wlan_on = false;
+
+void hdd_inform_wifi_on(void);
+void hdd_inform_wifi_off(void);
+
+static void wlan_hdd_cfg80211_rfkill_blocked(struct wiphy *wiphy,
+								bool blocked)
+{
+	printk("Called! Blocked: %d, wlan_on: %d", blocked, wlan_on);
+	if (blocked && wlan_on) {
+		hdd_inform_wifi_off();
+		wlan_on = false;
+	} else if (!blocked && !wlan_on) {
+		hdd_inform_wifi_on();
+		wlan_on = true;
+	}
+}
 /**
  * struct cfg80211_ops - cfg80211_ops
  *
@@ -26197,4 +26214,5 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 	.get_antenna = wlan_hdd_cfg80211_get_chainmask,
 	.get_channel = wlan_hdd_cfg80211_get_channel,
 	.set_bitrate_mask = wlan_hdd_cfg80211_set_bitrate_mask,
+	.rfkill_blocked = wlan_hdd_cfg80211_rfkill_blocked,
 };
