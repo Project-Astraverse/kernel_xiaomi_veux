@@ -664,7 +664,7 @@ static void battery_chg_update_uusb_type(struct battery_chg_dev *bcdev,
 	case POWER_SUPPLY_SCOPE_DEVICE:
 		if (adap_type == POWER_SUPPLY_USB_TYPE_SDP ||
 		    adap_type == POWER_SUPPLY_USB_TYPE_CDP ||
-		    adap_type == POWER_SUPPLY_TYPE_USB_PD) {
+		    adap_type == POWER_SUPPLY_USB_TYPE_PD) {
 			/* Device mode connect notification */
 			extcon_set_state_sync(bcdev->extcon, EXTCON_USB, 1);
 			bcdev->usb_prev_mode = EXTCON_USB;
