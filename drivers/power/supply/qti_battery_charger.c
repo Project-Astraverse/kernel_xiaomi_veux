@@ -654,10 +654,6 @@ static void battery_chg_update_uusb_type(struct battery_chg_dev *bcdev,
 	struct psy_state *pst = &bcdev->psy_list[PSY_TYPE_USB];
 	int rc;
 
-	/* Handle the extcon notification for uUSB case only */
-	if (bcdev->connector_type != USB_CONNECTOR_TYPE_MICRO_USB)
-		return;
-
 	rc = read_property_id(bcdev, pst, USB_SCOPE);
 	if (rc < 0) {
 		pr_err("Failed to read USB_SCOPE rc=%d\n", rc);
@@ -667,25 +663,17 @@ static void battery_chg_update_uusb_type(struct battery_chg_dev *bcdev,
 	switch (pst->prop[USB_SCOPE]) {
 	case POWER_SUPPLY_SCOPE_DEVICE:
 		if (adap_type == POWER_SUPPLY_USB_TYPE_SDP ||
-		    adap_type == POWER_SUPPLY_USB_TYPE_CDP) {
+		    adap_type == POWER_SUPPLY_USB_TYPE_CDP ||
+		    adap_type == POWER_SUPPLY_TYPE_USB_PD) {
 			/* Device mode connect notification */
 			extcon_set_state_sync(bcdev->extcon, EXTCON_USB, 1);
 			bcdev->usb_prev_mode = EXTCON_USB;
-			rc = qti_typec_partner_register(bcdev->typec_class,
-							TYPEC_DEVICE);
-			if (rc < 0)
-				pr_err("Failed to register typec partner rc=%d\n",
-					rc);
 		}
 		break;
 	case POWER_SUPPLY_SCOPE_SYSTEM:
 		/* Host mode connect notification */
 		extcon_set_state_sync(bcdev->extcon, EXTCON_USB_HOST, 1);
 		bcdev->usb_prev_mode = EXTCON_USB_HOST;
-		rc = qti_typec_partner_register(bcdev->typec_class, TYPEC_HOST);
-		if (rc < 0)
-			pr_err("Failed to register typec partner rc=%d\n",
-				rc);
 		break;
 	default:
 		if (bcdev->usb_prev_mode == EXTCON_USB ||
@@ -694,7 +682,6 @@ static void battery_chg_update_uusb_type(struct battery_chg_dev *bcdev,
 			extcon_set_state_sync(bcdev->extcon,
 					      bcdev->usb_prev_mode, 0);
 			bcdev->usb_prev_mode = EXTCON_NONE;
-			qti_typec_partner_unregister(bcdev->typec_class);
 		}
 		break;
 	}
@@ -2128,14 +2115,11 @@ static int battery_chg_probe(struct platform_device *pdev)
 	if (rc < 0)
 		dev_warn(dev, "Failed to register extcon rc=%d\n", rc);
 
-	if (bcdev->connector_type == USB_CONNECTOR_TYPE_MICRO_USB) {
-		bcdev->typec_class = qti_typec_class_init(bcdev->dev);
-		if (IS_ERR_OR_NULL(bcdev->typec_class)) {
-			dev_err(dev, "Failed to init typec class err=%d\n",
-				PTR_ERR(bcdev->typec_class));
-			return PTR_ERR(bcdev->typec_class);
-		}
-	}
+	bcdev->chg_wake = wakeup_source_register(bcdev->dev, "chg_wakelock");
+	INIT_DELAYED_WORK(&bcdev->nt_update_status_work,
+						nt_update_status_function_work);
+	queue_delayed_work(system_wq, &bcdev->nt_update_status_work,
+								round_jiffies(10 * HZ));
 
 	schedule_work(&bcdev->usb_type_work);
 
