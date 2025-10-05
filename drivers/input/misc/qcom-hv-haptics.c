@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/atomic.h>
@@ -2472,6 +2472,171 @@ static int haptics_upload_effect(struct input_dev *dev,
 		}
 
 		break;
+	case FF_RUMBLE: {
+		u32 combined;
+		u16 weak = effect->u.rumble.weak_magnitude;
+		u16 strong = effect->u.rumble.strong_magnitude;
+		u32 length_us = effect->replay.length * USEC_PER_MSEC;
+		u8 amplitude;
+		u32 tmp;
+
+		/* Weights strong more than weak */
+		combined = (u32)strong * 3 + (u32)weak;
+		combined = combined / 4;
+		if (combined > 0x7fff)
+			combined = 0x7fff;
+
+		tmp = get_direct_play_max_amplitude(chip);
+		tmp *= combined;
+		amplitude = tmp / 0x7fff;
+
+		dev_dbg(chip->dev,
+			"upload rumble effect: len=%dus weak=%#x strong=%#x amp=%#x\n",
+			length_us, weak, strong, amplitude);
+
+		rc = haptics_load_constant_effect(chip, amplitude);
+		if (rc < 0) {
+			dev_err(chip->dev,
+				"set direct play for rumble failed, rc=%d\n",
+				rc);
+			return rc;
+		}
+		break;
+	}
+	case FF_SPRING: {
+		s16 mag = 0;
+		u32 length_us = effect->replay.length * USEC_PER_MSEC;
+		u8 amplitude;
+		u32 tmp;
+
+		mag = effect->u.periodic.magnitude;
+		if (mag == 0)
+			mag = effect->u.constant.level;
+
+		if (mag < 0)
+			mag = -mag;
+		if (mag > 0x7fff)
+			mag = 0x7fff;
+
+		tmp = get_direct_play_max_amplitude(chip);
+		tmp *= (u32)mag;
+		amplitude = tmp / 0x7fff;
+
+		dev_dbg(chip->dev,
+			"upload spring effect: len=%dus mag=%#x amp=%#x\n",
+			length_us, mag, amplitude);
+
+		rc = haptics_load_constant_effect(chip, amplitude);
+		if (rc < 0) {
+			dev_err(chip->dev,
+				"set direct play for spring failed, rc=%d\n",
+				rc);
+			return rc;
+		}
+		break;
+	}
+/* DAMPER: map to a subtle direct-play amplitude using effect->u.periodic.magnitude */
+case FF_DAMPER: {
+	s16 mag = effect->u.periodic.magnitude;
+	u32 length_us = effect->replay.length * USEC_PER_MSEC;
+	u8 amplitude;
+	u32 tmp;
+
+	/* In case periodic.mag is absent, we want to fallback to constant.level */
+	if (mag == 0)
+		mag = effect->u.constant.level;
+
+	if (mag < 0)
+		mag = -mag;
+	if (mag > 0x7fff)
+		mag = 0x7fff;
+
+	/* This scale down is intentional for safety purposes */
+	tmp = get_direct_play_max_amplitude(chip);
+	/* Use a conservative cap so not full-strength by using only half the magnitude */
+	tmp *= (u32)mag;
+	tmp = tmp / 2;
+	amplitude = tmp / 0x7fff;
+
+	dev_dbg(chip->dev,
+		"upload damper effect: len=%dus mag=%#x amp=%#x\n",
+		length_us, mag, amplitude);
+
+	rc = haptics_load_constant_effect(chip, amplitude);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"set direct play for damper failed, rc=%d\n",
+			rc);
+		return rc;
+	}
+	break;
+}
+
+/* Since the friction is effect is low-level, we map it to a tiny amplitude */
+case FF_FRICTION: {
+	s16 mag = effect->u.periodic.magnitude;
+	u32 length_us = effect->replay.length * USEC_PER_MSEC;
+	u8 amplitude;
+	u32 tmp;
+
+	if (mag == 0)
+		mag = effect->u.constant.level;
+
+	if (mag < 0)
+		mag = -mag;
+	if (mag > 0x7fff)
+		mag = 0x7fff;
+
+	tmp = get_direct_play_max_amplitude(chip);
+	tmp *= (u32)mag;
+    tmp = (tmp * 30) / 100;
+	amplitude = tmp / 0x7fff;
+
+	dev_dbg(chip->dev,
+		"upload friction effect: len=%dus mag=%#x amp=%#x\n",
+		length_us, mag, amplitude);
+
+	rc = haptics_load_constant_effect(chip, amplitude);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"set direct play for friction failed, rc=%d\n",
+			rc);
+		return rc;
+	}
+	break;
+}
+case FF_PERIODIC:
+	if (effect->u.periodic.waveform == FF_CUSTOM) {
+		break;
+	} else {
+		s16 mag = effect->u.periodic.magnitude;
+		u32 period_us = effect->u.periodic.period;
+		u32 length_us = effect->replay.length * USEC_PER_MSEC;
+		u8 amplitude;
+		u32 tmp;
+
+		if (mag < 0) mag = -mag;
+		if (mag > 0x7fff) mag = 0x7fff;
+
+		tmp = get_direct_play_max_amplitude(chip);
+		tmp *= (u32)mag;
+		tmp = (tmp * 60) / 100;
+		amplitude = tmp / 0x7fff;
+
+		dev_dbg(chip->dev,
+			"upload periodic (simple) effect: waveform=%d period_us=%u len=%dus mag=%#x amp=%#x\n",
+			effect->u.periodic.waveform, period_us, length_us, mag, amplitude);
+
+		rc = haptics_load_constant_effect(chip, amplitude);
+		if (rc < 0) {
+			dev_err(chip->dev,
+				"set direct play for periodic (simple) failed, rc=%d\n",
+				rc);
+			return rc;
+		}
+		break;
+	}
+/* Keep the original FF_PERIODIC definition which returns an invalid argument anyway
 	case FF_PERIODIC:
 		if (effect->u.periodic.waveform != FF_CUSTOM) {
 			dev_err(chip->dev, "Only support custom waveforms\n");
@@ -2502,7 +2667,7 @@ static int haptics_upload_effect(struct input_dev *dev,
 			}
 		}
 
-		break;
+		break; */
 	default:
 		dev_err(chip->dev, "%d effect is not supported\n",
 				effect->type);
@@ -3035,11 +3200,6 @@ static ssize_t pattern_s_dbgfs_write(struct file *fp,
 			goto exit;
 		}
 
-		if (i >= ARRAY_SIZE(tmp)) {
-			pr_err("too many patterns in input string\n");
-			rc = -EINVAL;
-			goto exit;
-		}
 		tmp[i++] = val;
 	}
 
@@ -4744,6 +4904,11 @@ static int haptics_probe(struct platform_device *pdev)
 
 	input_set_capability(input_dev, EV_FF, FF_CONSTANT);
 	input_set_capability(input_dev, EV_FF, FF_GAIN);
+	/* Added basic support for rumble and spring */
+	input_set_capability(input_dev, EV_FF, FF_RUMBLE);
+	input_set_capability(input_dev, EV_FF, FF_SPRING);
+	input_set_capability(input_dev, EV_FF, FF_DAMPER);
+	input_set_capability(input_dev, EV_FF, FF_FRICTION);
 	if (chip->effects_count != 0) {
 		input_set_capability(input_dev, EV_FF, FF_PERIODIC);
 		input_set_capability(input_dev, EV_FF, FF_CUSTOM);
