@@ -459,6 +459,11 @@ void free_task(struct task_struct *tsk)
 	cpufreq_task_times_exit(tsk);
 	scs_release(tsk);
 
+        if (tsk->sysvshm) {
+	kfree(tsk->sysvshm);
+	tsk->sysvshm = NULL;
+}
+
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	/*
 	 * The task is finally done with both the stack and thread_info,
@@ -2126,6 +2131,7 @@ static __latent_entropy struct task_struct *copy_process(
 	if (retval)
 		goto bad_fork_cleanup_perf;
 	/* copy all the process information */
+        p->sysvshm = kzalloc(sizeof(struct sysv_shm), GFP_KERNEL);
 	shm_init_task(p);
 	retval = security_task_alloc(p, clone_flags);
 	if (retval)
@@ -3005,6 +3011,7 @@ int ksys_unshare(unsigned long unshare_flags)
 		if (unshare_flags & CLONE_NEWIPC) {
 			/* Orphan segments in old ns (see sem above). */
 			exit_shm(current);
+                        current->sysvshm = kzalloc(sizeof(struct sysv_shm), GFP_KERNEL);
 			shm_init_task(current);
 		}
 

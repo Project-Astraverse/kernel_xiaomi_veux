@@ -1481,17 +1481,14 @@ struct task_struct {
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
 	ANDROID_KABI_RESERVE(5);
-
 #if defined(CONFIG_SYSVIPC)
-	// struct sysv_sem			sysvsem;
-	ANDROID_KABI_USE(6, struct sysv_sem sysvsem);
-	// struct sysv_shm			sysvshm;
-	_ANDROID_KABI_REPLACE(ANDROID_KABI_RESERVE(7); ANDROID_KABI_RESERVE(8),
-						  struct sysv_shm sysvshm);
+        ANDROID_KABI_USE(6, struct sysv_sem sysvsem);
+        ANDROID_KABI_USE(7, struct sysv_shm *sysvshm);
+        ANDROID_KABI_RESERVE(8);
 #else
-	ANDROID_KABI_RESERVE(6);
-	ANDROID_KABI_RESERVE(7);
-	ANDROID_KABI_RESERVE(8);
+        ANDROID_KABI_RESERVE(6);
+        ANDROID_KABI_RESERVE(7);
+        ANDROID_KABI_RESERVE(8);
 #endif
 
 	/*
