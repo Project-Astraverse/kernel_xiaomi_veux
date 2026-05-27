@@ -239,13 +239,15 @@ static ssize_t modes_show(struct device *device,
 }
 
 #ifdef CONFIG_WT_QGKI
+ssize_t dsi_display_set_hbm(struct drm_connector *connector, int hbm_status);
+ssize_t dsi_display_get_hbm_status(struct drm_connector *connector);
+
 static ssize_t panel_info_show(struct device *device,
 			       struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE,
 			"panel_name=dsi_k6s_38_0c_0a_fhdp_dsc_vid_display\n");
 }
-#endif
 
 /* BSP.LCM - 2022.07.15 - modify for LCM add hbm */
 static ssize_t hbm_show(struct device *device,
@@ -275,6 +277,7 @@ static ssize_t hbm_store(struct device *device,
 	return ret ? ret : count;
 }
 /* end modify */
+#endif
 
 static DEVICE_ATTR_RW(status);
 static DEVICE_ATTR_RO(enabled);
