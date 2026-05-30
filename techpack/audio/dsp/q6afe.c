@@ -9991,7 +9991,7 @@ static int afe_get_clk_src(u16 port_id, char *clk_src)
 		return -EINVAL;
 	}
 
-	if (clkinfo_per_port[idx].clk_src_name == NULL)
+	if (strlen(clkinfo_per_port[idx].clk_src_name) == 0)
 		return -EINVAL;
 	strlcpy(clk_src, clkinfo_per_port[idx].clk_src_name,
 				CLK_SRC_NAME_MAX);
@@ -10020,7 +10020,7 @@ int afe_set_source_clk(u16 port_id, const char *clk_src)
 		return -EINVAL;
 	}
 
-	if (clk_src == NULL)
+	if (clk_src == NULL || strlen(clk_src) == 0)
 		return -EINVAL;
 	strlcpy(clkinfo_per_port[idx].clk_src_name, clk_src, CLK_SRC_NAME_MAX);
 	pr_debug("%s: updated clk src name %s port id 0x%x\n", __func__,
@@ -10498,19 +10498,15 @@ int afe_set_lpass_clock_v2(u16 port_id, struct afe_clk_set *cfg)
 		return -EINVAL;
 	}
 
-	if (clk_src_name != NULL) {
-		if (cfg->clk_freq_in_hz % AFE_SAMPLING_RATE_8KHZ) {
-			if (clk_src_name[CLK_SRC_FRACT] != NULL)
-				ret = afe_set_source_clk(port_id,
-						clk_src_name[CLK_SRC_FRACT]);
-		} else if (clk_src_name[CLK_SRC_INTEGRAL] != NULL) {
-			ret = afe_set_source_clk(port_id,
-					clk_src_name[CLK_SRC_INTEGRAL]);
-		}
-		if (ret < 0)
-			pr_err("%s: afe_set_source_clk fail %d\n",
-				__func__, ret);
-	}
+	if (cfg->clk_freq_in_hz % AFE_SAMPLING_RATE_8KHZ)
+		ret = afe_set_source_clk(port_id,
+				clk_src_name[CLK_SRC_FRACT]);
+	else
+		ret = afe_set_source_clk(port_id,
+				clk_src_name[CLK_SRC_INTEGRAL]);
+	if (ret < 0)
+		pr_err("%s: afe_set_source_clk fail %d\n",
+			__func__, ret);
 	idx = afe_get_port_idx(port_id);
 	if (idx < 0) {
 		pr_err("%s: cannot get clock id for port id 0x%x\n", __func__,
