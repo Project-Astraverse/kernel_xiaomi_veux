@@ -1878,8 +1878,6 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
-	pr_crit("CAM_CCI_LIFE: cam_cci_core_cfg called with cmd=%u\n", cci_ctrl->cmd);
-
 	if (!cci_dev) {
 		CAM_ERR(CAM_CCI, "Invalid params");
 		return -EINVAL;
