@@ -70,6 +70,10 @@ extern void __chk_io_ptr(const volatile void __iomem *);
 #error "Unknown compiler"
 #endif
 
+#ifndef function_nocfi
+#define function_nocfi(x) (x)
+#endif
+
 /*
  * Some architectures need to provide custom definitions of macros provided
  * by linux/compiler-*.h, and can do so using asm/compiler.h. We include that
