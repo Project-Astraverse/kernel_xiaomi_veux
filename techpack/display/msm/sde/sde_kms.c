@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -968,7 +968,7 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			old_mode = DRM_PANEL_BLANK_POWERDOWN;
 		}
 
-		if ((old_mode != new_mode) || (old_fps != new_fps)) {
+		if (old_mode != new_mode) {
 			struct drm_panel_notifier notifier_data;
 
 			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
@@ -1258,6 +1258,16 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 	SDE_EVT32(DRMID(crtc), crtc->state->active,
 			sde_kms->splash_data.num_splash_displays);
 
+	/*remove all votes if eDP displays are done with splash*/
+	if (dp_display_get_num_of_boot_displays()) {
+		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
+			sde_power_data_bus_set_quota(phandle, i,
+				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
+				phandle->ib_quota[i]);
+		pm_runtime_put_sync(sde_kms->dev->dev);
+		sde_kms->splash_data.num_splash_displays--;
+	}
+
 	for (i = 0; i < MAX_DSI_DISPLAYS; i++) {
 		splash_display = &sde_kms->splash_data.splash_display[i];
 		if (splash_display->encoder &&
@@ -1315,18 +1325,23 @@ int sde_kms_vm_pre_release(struct sde_kms *sde_kms,
 {
 	struct drm_crtc *crtc;
 	struct drm_encoder *encoder;
+	struct msm_drm_private *priv;
 	int rc = 0;
 
 	crtc = sde_kms_vm_get_vm_crtc(state);
 	if (!crtc)
 		return 0;
 
+	priv = crtc->dev->dev_private;
+
 	/* if vm_req is enabled, once CRTC on the commit is guaranteed */
 	sde_kms_wait_for_frame_transfer_complete(&sde_kms->base, crtc);
 
+	sde_dbg_set_hw_ownership_status(false);
+
 	sde_kms_cancel_delayed_work(crtc);
 
-	/* disable SDE irq's */
+	/* disable SDE encoder irq's */
 	drm_for_each_encoder_mask(encoder, crtc->dev,
 					crtc->state->encoder_mask) {
 		if (sde_encoder_in_clone_mode(encoder))
@@ -1336,9 +1351,6 @@ int sde_kms_vm_pre_release(struct sde_kms *sde_kms,
 	}
 
 	if (is_primary) {
-		/* disable IRQ line */
-		sde_irq_update(&sde_kms->base, false);
-
 		/* disable vblank events */
 		drm_crtc_vblank_off(crtc);
 
@@ -1346,7 +1358,14 @@ int sde_kms_vm_pre_release(struct sde_kms *sde_kms,
 		sde_crtc_reset_sw_state(crtc);
 	}
 
-	sde_dbg_set_hw_ownership_status(false);
+	/* Flush pp_event thread queue for any pending events */
+	kthread_flush_worker(&priv->pp_event_worker);
+
+	/*
+	 * Flush event thread queue for any pending events as vblank work
+	 * might get scheduled from drm_crtc_vblank_off
+	 */
+	kthread_flush_worker(&priv->event_thread[crtc->index].worker);
 
 	return rc;
 }
@@ -1431,17 +1450,22 @@ int sde_kms_vm_primary_post_commit(struct sde_kms *sde_kms,
 	/* properly handoff color processing features */
 	sde_cp_crtc_vm_primary_handoff(crtc);
 
+	sde_vm_lock(sde_kms);
+
 	/* handle non-SDE clients pre-release */
 	if (vm_ops->vm_client_pre_release) {
 		rc = vm_ops->vm_client_pre_release(sde_kms);
 		if (rc) {
 			SDE_ERROR("sde vm client pre_release failed, rc=%d\n",
 					rc);
+			sde_vm_unlock(sde_kms);
 			goto exit;
 		}
 	}
 
-	sde_vm_lock(sde_kms);
+	/* disable IRQ line */
+	sde_irq_update(&sde_kms->base, false);
+
 	/* release HW */
 	if (vm_ops->vm_release) {
 		rc = vm_ops->vm_release(sde_kms);
@@ -1475,7 +1499,7 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 		return;
 	priv = sde_kms->dev->dev_private;
 
-	if (!sde_kms_power_resource_is_enabled(sde_kms->dev)) {
+	if (sde_kms_power_resource_is_enabled(sde_kms->dev) < 0) {
 		SDE_ERROR("power resource is not enabled\n");
 		return;
 	}
@@ -2239,7 +2263,7 @@ static int sde_kms_postinit(struct msm_kms *kms)
 	drm_for_each_connector_iter(conn, &conn_iter)
 		sde_connector_post_init(dev, conn);
 	drm_connector_list_iter_end(&conn_iter);
-	return rc;
+	return 0;
 }
 
 static long sde_kms_round_pixclk(struct msm_kms *kms, unsigned long rate,
@@ -3382,7 +3406,7 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 	struct msm_display_info info;
 	struct drm_encoder *encoder = NULL;
 	struct drm_crtc *crtc = NULL;
-	int i, rc = 0, splash_index = 0;
+	int i, rc = 0;
 	struct drm_display_mode *drm_mode = NULL;
 	struct drm_device *dev;
 	struct msm_drm_private *priv;
@@ -3420,7 +3444,7 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 
 	DRM_INFO("cont_splash enabled in %d of %d display(s)\n",
 				sde_kms->splash_data.num_splash_displays,
-				sde_kms->dsi_display_count + sde_kms->dp_display_count);
+				sde_kms->dsi_display_count);
 
 	/* dsi */
 	for (i = 0; i < sde_kms->dsi_display_count; ++i) {
@@ -3486,20 +3510,11 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 			mutex_unlock(&dev->mode_config.mutex);
 			return -EINVAL;
 		}
+		mutex_unlock(&dev->mode_config.mutex);
 
 		crtc->state->encoder_mask = (1 << drm_encoder_index(encoder));
-		/* get supported modes in case of external bridge panels*/
-		if (!dsi_display->panel->num_timing_nodes) {
-			connector->funcs->fill_modes(connector,
-				dev->mode_config.max_width,
-				dev->mode_config.max_height);
-			drm_mode = list_first_entry(&connector->modes,
-				struct drm_display_mode, head);
-		 }
-		 else
-			drm_mode = _sde_kms_get_splash_mode(sde_kms, connector, state);
 
-		mutex_unlock(&dev->mode_config.mutex);
+		drm_mode = _sde_kms_get_splash_mode(sde_kms, connector, state);
 		if (!drm_mode) {
 			SDE_ERROR("drm_mode not found; handoff_type:%d\n",
 					sde_kms->splash_data.type);
@@ -3554,19 +3569,6 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 		} else {
 			SDE_DEBUG("Invalid encoder\n");
 			break;
-		}
-
-		splash_display = &sde_kms->splash_data.splash_display[splash_index];
-		if (splash_display->cont_splash_enabled) {
-			priv = sde_kms->dev->dev_private;
-			encoder->crtc = priv->crtcs[splash_index];
-			splash_display->encoder =  encoder;
-
-			SDE_DEBUG("dp-display:%d splash_index:%d crtc id[%d]:%d enc id[%d]:%d\n",
-				i, splash_index, encoder->crtc->index, encoder->crtc->base.id,
-				encoder->index,	encoder->base.id);
-
-			splash_index++;
 		}
 
 		mutex_lock(&dev->mode_config.mutex);
@@ -3912,6 +3914,7 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 	struct drm_device *ddev = dev_get_drvdata(dev);
 	struct drm_connector *conn;
 	struct drm_connector_list_iter conn_iter;
+	struct sde_encoder_virt *sde_enc;
 	struct msm_drm_private *priv = sde_kms->dev->dev_private;
 
 	drm_connector_list_iter_begin(ddev, &conn_iter);
@@ -3925,6 +3928,7 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 		if (sde_encoder_in_clone_mode(conn->encoder))
 			continue;
 
+		sde_enc = to_sde_encoder_virt(conn->encoder);
 		crtc_id = drm_crtc_index(conn->state->crtc);
 		if (priv->disp_thread[crtc_id].thread)
 			kthread_flush_worker(
@@ -3942,6 +3946,14 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 					&priv->event_thread[crtc_id].worker);
 			sde_encoder_idle_request(conn->encoder);
 		}
+
+		if (sde_enc->vblank_enabled) {
+			sde_encoder_wait_for_event(conn->encoder, MSM_ENC_VBLANK);
+			if (priv->event_thread[crtc_id].thread)
+				kthread_flush_worker(
+					&priv->event_thread[crtc_id].worker);
+		}
+
 	}
 	drm_connector_list_iter_end(&conn_iter);
 
