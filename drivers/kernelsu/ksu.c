@@ -22,6 +22,7 @@
 #include "manager/manager_identity.h"
 #include "manager/throne_tracker.h"
 #include "supercall/internal.h"
+#include "supercall/internal.h"
 #include "supercall/supercall.h"
 #include "infra/su_mount_ns.h"
 #include "infra/file_wrapper.h"

@@ -11,8 +11,14 @@ MDIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 $(info -- KDIR: $(KDIR))
 $(info -- MDIR: $(MDIR))
 
-# tiann/KernelSU v3.2.4 manager versionCode
-CFLAGS_ksu.o += -DKSU_VERSION=32457
+# Universal API baseline: satisfies KernelSU-Next v3.2.0 min (33110) and official
+# v3.2.5 min (32513). Per-manager versionCode is synced via ksuver_override on crown.
+CFLAGS_ksu.o += -DKSU_VERSION=33110
+
+ifndef KSU_OFFICIAL_MANAGER_VER
+KSU_OFFICIAL_MANAGER_VER := 32525
+endif
+CFLAGS_ksu.o += -DKSU_OFFICIAL_MANAGER_VER=$(KSU_OFFICIAL_MANAGER_VER)
 
 ifndef KSU_EXPECTED_SIZE
 KSU_EXPECTED_SIZE := 0x033b

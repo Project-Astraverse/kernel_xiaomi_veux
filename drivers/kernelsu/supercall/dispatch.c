@@ -18,24 +18,50 @@ static int do_grant_root(void __user *arg)
 static uint32_t ksuver_override = 0;
 static uint32_t ksuflags_override = 0;
 
+void ksu_set_version_override(__u32 version)
+{
+	ksuver_override = version;
+	pr_info("ksu version override set to %u\n", version);
+}
+
+void ksu_clear_version_override(void)
+{
+	ksuver_override = 0;
+}
+
+static void fill_get_info_common(__u32 *version, __u32 *flags, __u32 *features)
+{
+	*version = ksuver_override ? ksuver_override : KERNEL_SU_VERSION;
+	*features = KSU_FEATURE_MAX;
+	*flags = ksuflags_override ? ksuflags_override : 0;
+
+	if (!ksuflags_override && is_manager())
+		*flags |= KSU_GET_INFO_FLAG_MANAGER;
+}
+
 static int do_get_info(void __user *arg)
 {
-	struct ksu_get_info_cmd cmd = {.version = KERNEL_SU_VERSION, .flags = 0};
+	struct ksu_get_info_cmd cmd = {0};
 
-	// NOTE: we do not have LKM support so we don't bother with its flags or late-load
-	if (is_manager()) {
-		cmd.flags |= KSU_GET_INFO_FLAG_MANAGER;
-	}
-	cmd.features = KSU_FEATURE_MAX;
-
-	if (ksuver_override)
-		cmd.version = ksuver_override;
-
-	if (ksuflags_override)
-		cmd.flags = ksuflags_override;
+	fill_get_info_common(&cmd.version, &cmd.flags, &cmd.features);
+	cmd.uapi_version = KERNEL_SU_UAPI_VERSION;
 
 	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
 		pr_err("get_version: copy_to_user failed\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int do_get_info_legacy(void __user *arg)
+{
+	struct ksu_get_info_legacy_cmd cmd = {0};
+
+	fill_get_info_common(&cmd.version, &cmd.flags, &cmd.features);
+
+	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+		pr_err("get_version_legacy: copy_to_user failed\n");
 		return -EFAULT;
 	}
 
@@ -662,6 +688,7 @@ static int do_get_sulog_fd(void __user *arg)
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	{ .cmd = KSU_IOCTL_GRANT_ROOT, .name = "GRANT_ROOT", .handler = do_grant_root, .perm_check = allowed_for_su },
 	{ .cmd = KSU_IOCTL_GET_INFO, .name = "GET_INFO", .handler = do_get_info, .perm_check = always_allow },
+	{ .cmd = KSU_IOCTL_GET_INFO_LEGACY, .name = "GET_INFO_LEGACY", .handler = do_get_info_legacy, .perm_check = always_allow },
 	{ .cmd = KSU_IOCTL_REPORT_EVENT, .name = "REPORT_EVENT", .handler = do_report_event, .perm_check = only_root },
 	{ .cmd = KSU_IOCTL_SET_SEPOLICY, .name = "SET_SEPOLICY", .handler = do_set_sepolicy, .perm_check = only_root },
 	{ .cmd = KSU_IOCTL_CHECK_SAFEMODE, .name = "CHECK_SAFEMODE", .handler = do_check_safemode, .perm_check = always_allow },

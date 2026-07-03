@@ -25,6 +25,12 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 		if (strncmp(np->package, pkg, KSU_MAX_PACKAGE_NAME) == 0) {
 			pr_info("Crowning manager: %s(uid=%d)\n", pkg, np->uid);
 			ksu_set_manager_appid(np->uid);
+			{
+				u32 ver = ksu_get_matched_manager_version();
+
+				if (ver)
+					ksu_set_version_override(ver);
+			}
 			break;
 		}
 	}
@@ -341,11 +347,15 @@ skip_retry:
 		if (ksu_is_manager_appid_valid()) {
 			pr_info("manager is uninstalled, invalidate it!\n");
 			ksu_invalidate_manager_uid();
+			ksu_clear_version_override();
 			goto prune;
 		}
 		pr_info("Searching manager...\n");
 		search_manager("/data/app", 2, &uid_list);
 		pr_info("Search manager finished\n");
+	} else if (!prune_only) {
+		pr_info("Manager present, resyncing signature version...\n");
+		search_manager("/data/app", 2, &uid_list);
 	}
 
 prune:

@@ -29,6 +29,7 @@
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include "mi_thermal_message.h"
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
@@ -1797,6 +1798,11 @@ static int __init thermal_init(void)
 	result = of_parse_thermal_zones();
 	if (result)
 		goto unregister_class;
+
+	result = mi_thermal_message_register(&thermal_class);
+	if (result)
+		pr_warn("Thermal: create thermal message node failed, return %d\n",
+			result);
 
 	result = register_pm_notifier(&thermal_pm_nb);
 	if (result)

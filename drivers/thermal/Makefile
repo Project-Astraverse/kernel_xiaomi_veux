@@ -29,6 +29,7 @@ thermal_sys-$(CONFIG_DEVFREQ_THERMAL) += devfreq_cooling.o
 
 # debugfs support
 thermal_sys-$(CONFIG_QTI_THERMAL) += thermal_debugfs.o
+thermal_sys-$(CONFIG_MI_THERMAL_MESSAGE) += mi_thermal_message.o
 
 # platform thermal drivers
 obj-y				+= broadcom/

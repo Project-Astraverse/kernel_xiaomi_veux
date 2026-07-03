@@ -440,6 +440,14 @@ config UNIPHIER_THERMAL
 	  thermal framework. The driver supports CPU thermal zone temperature
 	  reporting and a couple of trip points.
 
+config MI_THERMAL_MESSAGE
+	bool "Xiaomi thermal_message sysfs bridge"
+	depends on THERMAL && THERMAL_OF && ARCH_QCOM
+	default y if ARCH_QCOM
+	help
+	  Expose Xiaomi thermal_message sysfs nodes used by mi_thermald
+	  and vendor thermal profile switching (sconfig, temp_state, etc.).
+
 config SPRD_THERMAL
 	tristate "Temperature sensor on Spreadtrum SoCs"
 	depends on ARCH_SPRD || COMPILE_TEST

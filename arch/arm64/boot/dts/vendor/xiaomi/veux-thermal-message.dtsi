@@ -1,0 +1,6 @@
+/ {
+	thermal-message {
+		compatible = "xiaomi,thermal-message";
+		board-sensor = "sdm-skin-therm-usr";
+	};
+};

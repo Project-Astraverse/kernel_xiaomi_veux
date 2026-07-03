@@ -10,5 +10,7 @@ bool allowed_for_su(void);
 long ksu_supercall_handle_ioctl(unsigned int cmd, void __user *argp);
 void ksu_supercall_dump_commands(void);
 void ksu_supercall_cleanup_state(void);
+void ksu_set_version_override(__u32 version);
+void ksu_clear_version_override(void);
 
 #endif // __KSU_H_SUPERCALL_INTERNAL
